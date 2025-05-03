@@ -1,0 +1,36 @@
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:1111/realms/dev
+      client:
+        registration:
+          keycloak:
+            client-id: fbp
+            client-secret: JxYYv7zap2uhHNWFii3ET8LRvx2RdJWh
+            scope: openid,profile,email
+            authorization-grant-type: authorization_code
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:1111/realms/dev
+            user-name-attribute: preferred_username
+  flyway:
+    user: fbp
+    password: fbp
+    schemas: fbp
+    url: jdbc:postgresql://localhost:5432/fbp
+  datasource:
+    url: jdbc:postgresql://localhost:5432/fbp
+    username: fbp
+    password: fbp
+    driver-class-name: org.postgresql.Driver
+keycloak:
+  server-url: http://localhost:1111
+  realm: dev
+  username: admin
+  password: password
+  credentials:
+    secret: JxYYv7zap2uhHNWFii3ET8LRvx2RdJWh
+server:
+  port: 8081

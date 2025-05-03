@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:12
+    container_name: fbp-postgres-container
+    environment:
+      POSTGRES_DB: fbp
+      POSTGRES_USER: fbp
+      POSTGRES_PASSWORD: fbp
+    ports:
+      - "5432:5432"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:21.0.1
+    container_name: fbp-keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: password
+      KEYCLOAK_IMPORT: /opt/keycloak/data/import/realm-config.json
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "1111:8080"
+    volumes:
+      - ./realm-config.json:/opt/keycloak/data/import/realm-config.json
+    command: ["start-dev", "--import-realm"]
+
+  redis:
+    image: redis:latest
+    container_name: fbp_redis_container
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redisdata:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+      - ./users.acl:/usr/local/etc/redis/users.acl
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf", "--aclfile", "/usr/local/etc/redis/users.acl" ]
+    environment:
+      TZ: Europe/Moscow
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "1234", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
