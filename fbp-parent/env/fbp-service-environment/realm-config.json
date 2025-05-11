@@ -540,6 +540,59 @@
       },
       "notBefore": 0,
       "groups": []
+    },
+    {
+      "id": "5efb8a60-3b67-40aa-8489-95cd011c0451",
+      "createdTimestamp": 1745066064604,
+      "username": "admin",
+      "enabled": true,
+      "totp": false,
+      "emailVerified": true,
+      "firstName": "admin",
+      "lastName": "admin",
+      "email": "admin@mail.ru",
+      "disableableCredentialTypes": [],
+      "requiredActions": [],
+      "realmRoles": [
+        "default-roles-dev",
+        "PARENT"
+      ],
+      "clientRoles": {
+        "realm-management": [
+          "manage-identity-providers",
+          "query-users",
+          "manage-users",
+          "query-groups",
+          "impersonation",
+          "manage-authorization",
+          "view-authorization",
+          "create-client",
+          "manage-clients",
+          "view-clients",
+          "view-identity-providers",
+          "query-realms",
+          "view-realm",
+          "manage-realm",
+          "view-events",
+          "query-clients",
+          "view-users",
+          "realm-admin",
+          "manage-events"
+        ],
+        "account": [
+          "manage-account-links",
+          "manage-consent",
+          "manage-account"
+        ]
+      },
+      "notBefore": 0,
+      "groups": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ]
     }
   ],
   "scopeMappings": [
@@ -753,7 +806,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "**********",
+      "secret": "yQJX4vRvoeYaJi0ZifiGLc7itniEfZZB",
       "redirectUris": [
         "http://localhost:8081/*"
       ],
