@@ -8,7 +8,7 @@ spring:
         registration:
           keycloak:
             client-id: fbp
-            client-secret: JxYYv7zap2uhHNWFii3ET8LRvx2RdJWh
+            client-secret: yQJX4vRvoeYaJi0ZifiGLc7itniEfZZB
             scope: openid,profile,email
             authorization-grant-type: authorization_code
         provider:
@@ -31,6 +31,10 @@ keycloak:
   username: admin
   password: password
   credentials:
-    secret: JxYYv7zap2uhHNWFii3ET8LRvx2RdJWh
+    secret: yQJX4vRvoeYaJi0ZifiGLc7itniEfZZB
 server:
   port: 8081
+  max-http-request-header-size: 64KB
+logging:
+  level:
+    root: info
