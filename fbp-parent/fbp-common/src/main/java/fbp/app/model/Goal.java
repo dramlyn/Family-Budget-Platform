@@ -25,6 +25,9 @@ public class Goal {
     @Column(name = "cost", nullable = false)
     private Integer cost;
 
+    @Column(name = "is_paid", nullable = false)
+    private Boolean isPaid;
+
     @Column(name = "name", nullable = false, length = 255)
     private String name;
 

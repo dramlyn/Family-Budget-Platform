@@ -17,7 +17,7 @@ import java.util.Optional;
 public class BudgetPeriodUtil {
     private final BudgetPeriodRepository budgetPeriodRepository;
 
-    public BudgetPeriod getOrCreateBudgetPeriod() {
+    public BudgetPeriod getOrCreateCurrentBudgetPeriod() {
         LocalDateTime localDateTime = LocalDateTime.now();
 
         int year = localDateTime.getYear();

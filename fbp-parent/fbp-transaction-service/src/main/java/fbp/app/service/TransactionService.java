@@ -20,8 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +34,7 @@ public class TransactionService {
     public TransactionDto createTransaction(CreateTransactionDtoRequest transactionRequest) {
         User user = findUser(transactionRequest.getUserId());
         Category category = findCategory(transactionRequest.getCategoryId());
-        BudgetPeriod budgetPeriod = budgetPeriodUtil.getOrCreateBudgetPeriod();
+        BudgetPeriod budgetPeriod = budgetPeriodUtil.getOrCreateCurrentBudgetPeriod();
 
         Transaction transaction = TransactionMapper.toModel(transactionRequest, category, user,
                 budgetPeriod, Instant.now());
