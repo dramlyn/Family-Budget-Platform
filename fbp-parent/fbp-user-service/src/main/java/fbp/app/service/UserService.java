@@ -17,12 +17,20 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.UserResource;
+import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 
@@ -125,6 +133,49 @@ public class UserService {
         }
     }
 
+    public void changePassword(ChangePasswordDtoRequest request){
+        List<UserRepresentation> users = keycloak.realm(realm)
+                .users()
+                .search(request.getEmail());
+
+        if (users.isEmpty()) {
+            throw new UserServiceException("User with email %s not found".formatted(request.getEmail()), HttpStatus.NOT_FOUND);
+        }
+
+        //добавить проверку старого пароля
+
+        String userId = users.get(0).getId();
+
+        CredentialRepresentation credential = new CredentialRepresentation();
+        credential.setType(CredentialRepresentation.PASSWORD);
+        credential.setValue(request.getNewPassword());
+        credential.setTemporary(false);
+
+        try{
+            keycloak.realm(realm)
+                    .users()
+                    .get(userId)
+                    .resetPassword(credential);
+        } catch (Exception e){
+            log.error(e.getMessage());
+            throw new UserServiceException("Can't change password of user with email %s. Error message: %s".formatted(request.getEmail(), e.getMessage()),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public UserDto updateUser(UpdateUserDtoRequest request, String email){
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new UserServiceException("User with email %s not found".formatted(email), HttpStatus.NOT_FOUND));
+        if(request.getFirstName() != null){
+            user.setFirstName(request.getFirstName());
+        }
+        if(request.getLastName() != null){
+            user.setLastName(request.getLastName());
+        }
+
+        //добавить измениение имя/фамилия в KK
+        return UserMapper.toUserDto(userRepository.save(user));
+    }
+
     private User fillCommonUserFields(String firstName, String lastName, Role role, String email, String kkId) {
         User user = new User();
         user.setEmail(email);
@@ -164,7 +215,7 @@ public class UserService {
         }
     }
 
-    public void sendEmailVerification(String kkId, String email) {
+    private void sendEmailVerification(String kkId, String email) {
         log.info("Verifying email for user {}", email);
 
         final UserResource userResource = keycloak.realm(realm).users().get(kkId);
@@ -211,4 +262,26 @@ public class UserService {
     private void deleteKeycloakUser(String kkId) {
         keycloak.realm(realm).users().delete(kkId);
     }
+
+    /*private boolean validateUser(String username, String password) {
+        String tokenUrl = KEYCLOAK_URL + "/realms/" + REALM + "/protocol/openid-connect/token";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+        map.add("username", username);
+        map.add("password", password);
+        map.add("grant_type", "password");
+        map.add("client_id", CLIENT_ID);
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(tokenUrl, request, String.class);
+            return response.getStatusCode().is2xxSuccessful();
+        } catch (HttpClientErrorException ex) {
+            return false;
+        }
+    }*/
 }

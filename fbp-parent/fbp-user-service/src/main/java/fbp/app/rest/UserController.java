@@ -1,9 +1,7 @@
 package fbp.app.rest;
 
 import fbp.app.config.KeycloakActions;
-import fbp.app.dto.user.RegisterParentDtoRequest;
-import fbp.app.dto.user.RegisterUserRequestDto;
-import fbp.app.dto.user.UserDto;
+import fbp.app.dto.user.*;
 import fbp.app.model.type.Role;
 import fbp.app.service.UserService;
 
@@ -44,11 +42,15 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
-    /*
-    Метод изменения пароля
-     */
+    @PutMapping("/change-password")
+    public ResponseEntity<Void> changePassword(@RequestBody @Valid ChangePasswordDtoRequest request) {
+        userService.changePassword(request);
+        return ResponseEntity.ok().build();
+    }
 
-    /*
-    Метод изменения личного кабинета пользователя
-     */
+    @PutMapping("/{email}")
+    public ResponseEntity<UserDto> updateUserInfo(@RequestBody UpdateUserDtoRequest request,
+                                                  @PathVariable String email) {
+        return ResponseEntity.ok(userService.updateUser(request, email));
+    }
 }
