@@ -3,6 +3,7 @@ package fbp.app.model;
 import fbp.app.model.type.Role;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -13,6 +14,7 @@ import java.time.Instant;
 @Table(name = "user", schema = "fbp")
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class User {
     @Id
     @Column(name = "id")

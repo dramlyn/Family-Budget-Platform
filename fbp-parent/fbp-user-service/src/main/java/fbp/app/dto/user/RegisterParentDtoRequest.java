@@ -3,12 +3,14 @@ package fbp.app.dto.user;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
+@Builder
 public class RegisterParentDtoRequest {
     @NotEmpty(message = "Поле email не должно быть пустым")
     @NotNull(message = "Поле email не должно быть null")

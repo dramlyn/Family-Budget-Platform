@@ -1,0 +1,43 @@
+# Test Configuration for FBP Family Budget Service
+spring:
+  # Database Configuration for Testing
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+
+  # JPA Configuration for Testing
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: false
+        show_sql: false
+    show-sql: false
+    open-in-view: false
+
+  # H2 Console Configuration
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+# Logging Configuration for Tests
+logging:
+  level:
+    fbp.app: DEBUG
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+    org.springframework.data: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Test-specific server configuration
+server:
+  port: 0 # Random port for testing
