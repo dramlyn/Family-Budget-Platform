@@ -13,9 +13,6 @@ public class RegisterParentDtoRequest {
     @NotEmpty(message = "Поле email не должно быть пустым")
     @NotNull(message = "Поле email не должно быть null")
     private String email;
-    @NotEmpty(message = "Поле password не должно быть пустым")
-    @NotNull(message = "Поле password не должно быть null")
-    private String password;
     @NotEmpty(message = "Поле firstName не должно быть пустым")
     @NotNull(message = "Поле firstName не должно быть null")
     private String firstName;

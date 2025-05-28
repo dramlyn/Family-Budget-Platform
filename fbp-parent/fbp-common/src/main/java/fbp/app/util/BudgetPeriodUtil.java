@@ -38,4 +38,15 @@ public class BudgetPeriodUtil {
             throw new UserServiceException(message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    public BudgetPeriod getByPeriodIdOrLatestPeriodId(Long periodId){
+        BudgetPeriod budgetPeriod;
+        if(periodId == null){
+            budgetPeriod = getOrCreateCurrentBudgetPeriod();
+        } else {
+            budgetPeriod = budgetPeriodRepository.findById(periodId)
+                    .orElseThrow(() -> new UserServiceException("Budget period with id %s not found".formatted(periodId), HttpStatus.NOT_FOUND));
+        }
+        return budgetPeriod;
+    }
 }

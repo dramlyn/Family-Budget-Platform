@@ -43,17 +43,11 @@ public class FamilyBudgetPlanService {
     }
 
     public FamilyBudgetPlanDto getFamilyBudgetPlanByFamilyId(Long familyId, Long periodId){
-        BudgetPeriod budgetPeriod;
-        if(periodId == null){
-            budgetPeriod = budgetPeriodUtil.getOrCreateCurrentBudgetPeriod();
-        } else {
-            budgetPeriod = budgetPeriodRepository.findById(periodId)
-                    .orElseThrow(() -> new UserServiceException("Budget period with id %s not found".formatted(periodId), HttpStatus.NOT_FOUND));
-        }
+        BudgetPeriod budgetPeriod = budgetPeriodUtil.getByPeriodIdOrLatestPeriodId(periodId);
         modelFinder.findFamily(familyId);
 
         FamilyBudgetPlan familyBudgetPlan = familyBudgetPlanRepository.findByFamilyIdAndPeriodId(familyId, budgetPeriod.getId())
-                .orElseThrow(() -> new UserServiceException("Family budget plan with family id %s and period id %s not found".formatted(familyId, periodId),
+                .orElseThrow(() -> new UserServiceException("Family budget plan with family id %s and period id %s not found".formatted(familyId, budgetPeriod.getId()),
                         HttpStatus.NOT_FOUND));
         return FamilyBudgetPlanMapper.toDto(familyBudgetPlan);
     }

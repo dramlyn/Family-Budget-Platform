@@ -13,5 +13,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByKeycloakId(String keycloakId);
     @Query("SELECT t FROM User t " +
             "WHERE t.family.id = :familyId AND t.role = 'PARENT'")
+    List<User> findParentByFamilyId(Long familyId);
     List<User> findByFamilyId(Long familyId);
 }

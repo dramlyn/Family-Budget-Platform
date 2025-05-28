@@ -15,6 +15,7 @@ import fbp.app.util.BudgetPeriodUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,8 +53,19 @@ public class TransactionService {
                 });
     }
 
-    public List<TransactionDto> getAllByParam(Long periodId, Long userId) {
-        return transactionRepository.findTransactionsWithParams(periodId, userId).stream()
+    public List<TransactionDto> getAllByParam(Long periodId) {
+        User user = userRepository.findByKeycloakId(SecurityContextHolder.getContext().getAuthentication().getName())
+                .orElseThrow(() -> new UserServiceException("User with kkId %s not found".formatted(SecurityContextHolder.getContext().getAuthentication().getName()), HttpStatus.NOT_FOUND));
+        return transactionRepository.findTransactionsWithParams(periodId, user.getId()).stream()
+                .map(TransactionMapper::toDto).toList();
+    }
+
+    public List<TransactionDto> getAllByCategoryIdAndPeriodId(Long categoryId, Long periodId){
+        User user = userRepository.findByKeycloakId(SecurityContextHolder.getContext().getAuthentication().getName())
+                .orElseThrow(() -> new UserServiceException("User with kkId %s not found".formatted(SecurityContextHolder.getContext().getAuthentication().getName()), HttpStatus.NOT_FOUND));
+        Category category = findCategory(categoryId);
+        BudgetPeriod budgetPeriod = budgetPeriodUtil.getByPeriodIdOrLatestPeriodId(periodId);
+        return transactionRepository.findAllUserTransactionsByCategoryAndPeriodAndUser(budgetPeriod.getId(), category.getId(), user.getId()).stream()
                 .map(TransactionMapper::toDto).toList();
     }
 

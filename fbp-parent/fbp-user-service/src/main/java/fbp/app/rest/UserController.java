@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -52,5 +53,10 @@ public class UserController {
     public ResponseEntity<UserDto> updateUserInfo(@RequestBody UpdateUserDtoRequest request,
                                                   @PathVariable String email) {
         return ResponseEntity.ok(userService.updateUser(request, email));
+    }
+
+    @GetMapping("/whoami")
+    public ResponseEntity<UserDto> whoami(){
+        return ResponseEntity.ok(userService.getUserByKkId(SecurityContextHolder.getContext().getAuthentication().getName()));
     }
 }

@@ -26,9 +26,14 @@ public class TransactionController {
     }
 
     @GetMapping("/by-param")
-    public ResponseEntity<List<TransactionDto>> getTransactionByParam(@RequestParam(name = "periodId", required = false) Long periodId,
-                                                                      @RequestParam(name = "userId", required = false) Long userId) {
-        return ResponseEntity.ok(transactionService.getAllByParam(periodId, userId));
+    public ResponseEntity<List<TransactionDto>> getTransactionByParam(@RequestParam(name = "periodId", required = false) Long periodId) {
+        return ResponseEntity.ok(transactionService.getAllByParam(periodId));
+    }
+
+    @GetMapping("/by-category/{categoryId}")
+    public ResponseEntity<List<TransactionDto>> getTransactionsByCategoryId(@PathVariable Long categoryId,
+                                                                            @RequestParam Long periodId){
+        return ResponseEntity.ok(transactionService.getAllByCategoryIdAndPeriodId(categoryId, periodId));
     }
 
     @DeleteMapping("/{transactionId}")

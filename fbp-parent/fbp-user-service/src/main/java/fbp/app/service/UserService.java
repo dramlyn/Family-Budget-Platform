@@ -18,19 +18,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.HttpClientErrorException;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 
@@ -83,7 +77,7 @@ public class UserService {
 
         KeycloakUserDto registerUserRequestDto = UserMapper.toKeycloakUserDto(request);
 
-        if(userRepository.findByFamilyId(familyId).size() >= 2){
+        if(userRepository.findParentByFamilyId(familyId).size() >= 2){
             throw new UserServiceException("In family with id %s is already 2 parents.".formatted(familyId), HttpStatus.CONFLICT);
         }
 
@@ -172,8 +166,34 @@ public class UserService {
             user.setLastName(request.getLastName());
         }
 
-        //добавить измениение имя/фамилия в KK
+        updateUserName(user.getKeycloakId(), request.getFirstName(), request.getLastName());
+
         return UserMapper.toUserDto(userRepository.save(user));
+    }
+
+    private void updateUserName(String userId, String newFirstName, String newLastName) {
+        UserResource userResource = keycloak.realm(realm)
+                .users()
+                .get(userId);
+
+        UserRepresentation userRep = new UserRepresentation();
+        userRep.setFirstName(newFirstName);
+        userRep.setLastName(newLastName);
+
+        userResource.update(userRep);
+    }
+
+    public UserDto getUserByKkId(String kkId){
+        return UserMapper.toUserDto(userRepository.findByKeycloakId(kkId)
+                .orElseThrow(() -> {
+                    String message = String.format("User with keycloak id %s not found", kkId);
+                    log.error(message);
+                    return new UserServiceException(message, HttpStatus.BAD_REQUEST);
+                }));
+    }
+
+    public List<UserInfoDto> getAllFamilyMembers(Long familyId) {
+        return userRepository.findByFamilyId(familyId).stream().map(user -> new UserInfoDto(user.getFirstName(), user.getLastName(), user.getId(), user.getRole())).toList();
     }
 
     private User fillCommonUserFields(String firstName, String lastName, Role role, String email, String kkId) {
@@ -207,6 +227,7 @@ public class UserService {
                 throw new UserServiceException("Keycloak user creation failed: " + error, HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
+            assignRealmRoleToUser(kkId, role.toString());
             sendEmailVerification(kkId, userDto.getEmail());
             return kkId;
         } catch (Exception e) {
@@ -241,10 +262,22 @@ public class UserService {
         user.setEmail(userDto.getEmail());
         user.setFirstName(userDto.getFirstName());
         user.setLastName(userDto.getLastName());
-        user.setRealmRoles(Collections.singletonList(role.name()));
         user.setEmailVerified(false);
         user.setRequiredActions(List.of(KeycloakActions.UPDATE_PASSWORD.name()));
         return user;
+    }
+
+    private void assignRealmRoleToUser(String userId, String roleName) {
+        RoleRepresentation roleRep = keycloak.realm(realm).roles().get(roleName).toRepresentation();
+
+        keycloak.realm(realm)
+                .users()
+                .get(userId)
+                .roles()
+                .realmLevel()
+                .add(Collections.singletonList(roleRep));
+
+        log.info("Assigned realm role '{}' to user '{}'", roleName, userId);
     }
 
     private User saveUser(User user) {

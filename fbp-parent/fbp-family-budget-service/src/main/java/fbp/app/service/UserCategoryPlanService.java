@@ -2,6 +2,8 @@ package fbp.app.service;
 
 import fbp.app.dto.family_budget_plan.CreateUserCategoryPlanDtoRequest;
 import fbp.app.dto.family_budget_plan.UserCategoryPlanDto;
+import fbp.app.dto.user_budget.SumUserBudgetDto;
+import fbp.app.dto.user_budget.UserBudgetDto;
 import fbp.app.exception.UserServiceException;
 import fbp.app.mapper.UserCategoryPlanMapper;
 import fbp.app.model.BudgetPeriod;
@@ -54,5 +56,37 @@ public class UserCategoryPlanService {
     public List<UserCategoryPlanDto> findByFamilyIdAndBudgetPeriod(Long familyId, Long periodId){
         return userCategoryPlanRepository.findByFamilyIdAndPeriodId(periodId, familyId).stream()
                 .map(UserCategoryPlanMapper::toDto).toList();
+    }
+
+    public SumUserBudgetDto getUserMonthSummaryBudget(String kkId, Long periodId){
+        BudgetPeriod budgetPeriod = budgetPeriodUtil.getByPeriodIdOrLatestPeriodId(periodId);
+        User user = modelFinder.findUserByKeycloakId(kkId);
+
+        List<UserCategoryPlan> userCategoriesBalances = userCategoryPlanRepository.findByUserIdAndPeriodId(user.getId(), budgetPeriod.getId());
+
+        return SumUserBudgetDto.builder()
+                .userId(user.getId())
+                .periodId(budgetPeriod.getId())
+                .budget(userCategoriesBalances.stream().mapToInt(UserCategoryPlan::getLimit).sum())
+                .build();
+
+    }
+
+    public UserBudgetDto getUserCategoryBudget(String kkId, Long periodId, Long categoryId){
+        BudgetPeriod budgetPeriod = budgetPeriodUtil.getByPeriodIdOrLatestPeriodId(periodId);
+        Category category = modelFinder.findCategory(categoryId);
+        User user = modelFinder.findUserByKeycloakId(kkId);
+
+        UserCategoryPlan userCategoryPlan = userCategoryPlanRepository.findByCategoryIdAndPeriodIdAndUserId(
+                category.getId(), budgetPeriod.getId(), user.getId())   
+                .orElseThrow(() -> new UserServiceException("User category plan not found by categoryId %s, periodId %s, userId %s".formatted(category.getId(),
+                        budgetPeriod.getId(), user.getId()), HttpStatus.NOT_FOUND));
+
+        return UserBudgetDto.builder()
+                .budget(userCategoryPlan.getLimit())
+                .categoryId(category.getId())
+                .periodId(budgetPeriod.getId())
+                .userId(user.getId())
+                .build();
     }
 }

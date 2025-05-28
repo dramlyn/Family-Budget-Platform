@@ -14,8 +14,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByPeriodId(Long periodId);
 
     @Query("SELECT t FROM Transaction t " +
-            "WHERE (:periodId IS NULL OR t.period.id = :periodId) " +
-            "AND (:userId IS NULL OR t.user.id = :userId)")
+            "WHERE t.period.id = :periodId " +
+            "AND t.user.id = :userId")
     List<Transaction> findTransactionsWithParams(@Param("periodId") Long periodId,
                                                  @Param("userId") Long userId);
 
@@ -27,4 +27,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findAllUserExpensesByCategoryAndPeriod(@Param("periodId") Long periodId,
                                               @Param("categoryId") Long categoryId,
                                               @Param("userId") Long userId);
+
+    @Query("SELECT t FROM Transaction t " +
+            "WHERE t.period.id = :periodId " +
+            "AND t.user.id = :userId " +
+            "AND t.category.id = :categoryId ")
+    List<Transaction> findAllUserTransactionsByCategoryAndPeriodAndUser(@Param("periodId") Long periodId,
+                                                             @Param("categoryId") Long categoryId,
+                                                             @Param("userId") Long userId);
 }
