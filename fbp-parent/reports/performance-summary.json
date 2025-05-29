@@ -1,0 +1,58 @@
+{
+  "report_date": "28.05.2025 22:20:30",
+  "summary": {
+    "total_test_categories": 5,
+    "passed_categories": 5,
+    "total_operations": 425,
+    "successful_operations": 396,
+    "total_time_ms": 2678,
+    "overall_success_rate": 93,2
+  },
+  "test_results": [
+    {
+      "test_name": "Database Performance",
+      "success": true,
+      "successful_operations": 99,
+      "total_operations": 100,
+      "success_rate": 99,0,
+      "duration_ms": 446,
+      "throughput": 221.97309417040358
+    },
+    {
+      "test_name": "Security Performance",
+      "success": true,
+      "successful_operations": 85,
+      "total_operations": 100,
+      "success_rate": 85,0,
+      "duration_ms": 480,
+      "throughput": 177.08333333333334
+    },
+    {
+      "test_name": "API Performance",
+      "success": true,
+      "successful_operations": 69,
+      "total_operations": 75,
+      "success_rate": 92,0,
+      "duration_ms": 1159,
+      "throughput": 0.0
+    },
+    {
+      "test_name": "Load Test Performance",
+      "success": true,
+      "successful_operations": 48,
+      "total_operations": 50,
+      "success_rate": 96,0,
+      "duration_ms": 302,
+      "throughput": 158.94039735099338
+    },
+    {
+      "test_name": "Mock Performance",
+      "success": true,
+      "successful_operations": 95,
+      "total_operations": 100,
+      "success_rate": 95,0,
+      "duration_ms": 291,
+      "throughput": 0.0
+    }
+  ]
+}
