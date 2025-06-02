@@ -36,7 +36,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorise ->
                         authorise
                                 .requestMatchers("/v1/users/parent", "/v1/users/forgot-password/**",
-                                        "/swagger-ui/**", "/v3/api-docs/**")
+                                        "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html")
                                 .permitAll()
                                 .requestMatchers(HttpMethod.OPTIONS, "/**")
                                 .permitAll()

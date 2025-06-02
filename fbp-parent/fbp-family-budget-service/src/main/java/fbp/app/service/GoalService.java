@@ -81,11 +81,7 @@ public class GoalService {
 
         int currentSum = goal.getBalance() + request.getBalance();
 
-        System.out.println(currentSum);
-        if(currentSum > goal.getCost()){
-            String message = "No extra money can be added to the goal balance with id %s".formatted(request.getGoalId());
-            throw new UserServiceException(message, HttpStatus.BAD_REQUEST);
-        } else if (currentSum == goal.getCost()){
+        if (currentSum >= goal.getCost()){
             goal.setBalance(currentSum);
             goal.setIsPaid(true);
         } else {
