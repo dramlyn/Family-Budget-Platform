@@ -8,25 +8,31 @@ import fbp.app.config.KeycloakActions;
 import fbp.app.dto.family.CreateFamilyDtoRequest;
 import fbp.app.dto.user.*;
 import fbp.app.exception.UserServiceException;
+import fbp.app.mapper.UserMapper;
+import fbp.app.model.Family;
 import fbp.app.model.User;
-import fbp.app.repository.FamilyRepository;
+import fbp.app.model.type.Role;
 import fbp.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.UserResource;
+import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.ws.rs.core.Response;
+
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class UserService {
     private final UserRepository userRepository;
-    private final FamilyRepository familyRepository;
     private final Keycloak keycloak;
     private final FamilyService familyService;
 
@@ -34,66 +40,54 @@ public class UserService {
     private String realm;
 
     @Transactional
-    public User registerUser(RegisterUserRequestDto request, Role role) {
-        KeycloakUserDto registerUserRequestDto = KeycloakUserDto.builder()
-                .email(request.getEmail())
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .password(request.getPassword())
-                .build();
+    public UserDto registerUser(RegisterUserRequestDto request, Role role) {
+        Family family = familyService.findFamilyById(request.getFamilyId());
+
+        KeycloakUserDto registerUserRequestDto = UserMapper.toKeycloakUserDto(request);
         String keycloakId = createKeycloakUser(registerUserRequestDto, role);
 
         User user = fillCommonUserFields(request.getFirstName(),
                 request.getLastName(), role, request.getEmail(), keycloakId);
-        user.setFamilyId(request.getFamilyId());
+        user.setFamily(family);
 
-        return saveUser(user);
+        return UserMapper.toUserDto(saveUser(user));
     }
 
     @Transactional
-    public User registerParent(RegisterParentDtoRequest request, Role role) {
-        KeycloakUserDto registerUserRequestDto = KeycloakUserDto.builder()
-                .email(request.getEmail())
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .password(request.getPassword())
-                .build();
+    public UserDto registerParent(RegisterParentDtoRequest request, Role role) {
+        CreateFamilyDtoRequest createFamilyDtoRequest = new CreateFamilyDtoRequest();
+        createFamilyDtoRequest.setName(request.getFamilyName());
+        createFamilyDtoRequest.setDescription(request.getFamilyName());
+        Family family = familyService.createFamily(createFamilyDtoRequest);
+
+        KeycloakUserDto registerUserRequestDto = UserMapper.toKeycloakUserDto(request);
         String keycloakId = createKeycloakUser(registerUserRequestDto, role);
 
         User user = fillCommonUserFields(registerUserRequestDto.getFirstName(), registerUserRequestDto.getLastName(),
                 role, registerUserRequestDto.getEmail(), keycloakId);
 
-        CreateFamilyDtoRequest createFamilyDtoRequest = new CreateFamilyDtoRequest();
-        createFamilyDtoRequest.setName(request.getFamilyName());
-        createFamilyDtoRequest.setDescription(request.getFamilyName());
+        user.setFamily(family);
 
-        user.setFamilyId(familyService.createFamily(createFamilyDtoRequest).getId());
-
-        return saveUser(user);
+        return UserMapper.toUserDto(saveUser(user));
     }
 
     @Transactional
-    public User addParentToFamily(AddParentToFamilyDtoRequest request, Long familyId) {
-        if (familyRepository.findById(familyId).isEmpty()) {
-            String message = String.format("Family with specified id %s not found.", familyId);
-            log.error(message);
-            throw new UserServiceException(message, HttpStatus.BAD_REQUEST);
-        }
+    public UserDto addParentToFamily(AddParentToFamilyDtoRequest request, Long familyId) {
+        Family family = familyService.findFamilyById(familyId);
 
-        KeycloakUserDto registerUserRequestDto = KeycloakUserDto.builder()
-                .email(request.getEmail())
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .password(request.getPassword())
-                .build();
+        KeycloakUserDto registerUserRequestDto = UserMapper.toKeycloakUserDto(request);
+
+        if(userRepository.findParentByFamilyId(familyId).size() >= 2){
+            throw new UserServiceException("In family with id %s is already 2 parents.".formatted(familyId), HttpStatus.CONFLICT);
+        }
 
         String keycloakId = createKeycloakUser(registerUserRequestDto, Role.PARENT);
 
         User user = fillCommonUserFields(request.getFirstName(),
                 request.getLastName(), Role.PARENT, request.getEmail(), keycloakId);
-        user.setFamilyId(familyId);
+        user.setFamily(family);
 
-        return saveUser(user);
+        return UserMapper.toUserDto(saveUser(user));
     }
 
     @Transactional
@@ -101,10 +95,8 @@ public class UserService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Delete from Keycloak
         deleteKeycloakUser(user.getKeycloakId());
 
-        // Delete from database
         userRepository.deleteById(user.getId());
     }
 
@@ -135,6 +127,75 @@ public class UserService {
         }
     }
 
+    public void changePassword(ChangePasswordDtoRequest request){
+        List<UserRepresentation> users = keycloak.realm(realm)
+                .users()
+                .search(request.getEmail());
+
+        if (users.isEmpty()) {
+            throw new UserServiceException("User with email %s not found".formatted(request.getEmail()), HttpStatus.NOT_FOUND);
+        }
+
+        //добавить проверку старого пароля
+
+        String userId = users.get(0).getId();
+
+        CredentialRepresentation credential = new CredentialRepresentation();
+        credential.setType(CredentialRepresentation.PASSWORD);
+        credential.setValue(request.getNewPassword());
+        credential.setTemporary(false);
+
+        try{
+            keycloak.realm(realm)
+                    .users()
+                    .get(userId)
+                    .resetPassword(credential);
+        } catch (Exception e){
+            log.error(e.getMessage());
+            throw new UserServiceException("Can't change password of user with email %s. Error message: %s".formatted(request.getEmail(), e.getMessage()),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public UserDto updateUser(UpdateUserDtoRequest request, String email){
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new UserServiceException("User with email %s not found".formatted(email), HttpStatus.NOT_FOUND));
+        if(request.getFirstName() != null){
+            user.setFirstName(request.getFirstName());
+        }
+        if(request.getLastName() != null){
+            user.setLastName(request.getLastName());
+        }
+
+        updateUserName(user.getKeycloakId(), request.getFirstName(), request.getLastName());
+
+        return UserMapper.toUserDto(userRepository.save(user));
+    }
+
+    private void updateUserName(String userId, String newFirstName, String newLastName) {
+        UserResource userResource = keycloak.realm(realm)
+                .users()
+                .get(userId);
+
+        UserRepresentation userRep = new UserRepresentation();
+        userRep.setFirstName(newFirstName);
+        userRep.setLastName(newLastName);
+
+        userResource.update(userRep);
+    }
+
+    public UserDto getUserByKkId(String kkId){
+        return UserMapper.toUserDto(userRepository.findByKeycloakId(kkId)
+                .orElseThrow(() -> {
+                    String message = String.format("User with keycloak id %s not found", kkId);
+                    log.error(message);
+                    return new UserServiceException(message, HttpStatus.BAD_REQUEST);
+                }));
+    }
+
+    public List<UserInfoDto> getAllFamilyMembers(Long familyId) {
+        return userRepository.findByFamilyId(familyId).stream().map(user -> new UserInfoDto(user.getFirstName(), user.getLastName(), user.getId(), user.getRole())).toList();
+    }
+
     private User fillCommonUserFields(String firstName, String lastName, Role role, String email, String kkId) {
         User user = new User();
         user.setEmail(email);
@@ -155,8 +216,18 @@ public class UserService {
         UserRepresentation user = getUserRepresentation(userDto, role);
 
         try {
-            jakarta.ws.rs.core.Response response = keycloak.realm(realm).users().create(user);
-            String kkId = response.getLocation().getPath().replaceAll(".*/([^/]+)$", "$1");
+            Response response = keycloak.realm(realm).users().create(user);
+            String kkId;
+            if (response.getStatus() == Response.Status.CREATED.getStatusCode()) {
+                kkId = response.getLocation().getPath().replaceAll(".*/([^/]+)$", "$1");
+                log.info("User created with ID: {}", kkId);
+            } else {
+                String error = response.readEntity(String.class);
+                log.error("Failed to create user in Keycloak: {}", error);
+                throw new UserServiceException("Keycloak user creation failed: " + error, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+            assignRealmRoleToUser(kkId, role.toString());
             sendEmailVerification(kkId, userDto.getEmail());
             return kkId;
         } catch (Exception e) {
@@ -165,7 +236,7 @@ public class UserService {
         }
     }
 
-    public void sendEmailVerification(String kkId, String email) {
+    private void sendEmailVerification(String kkId, String email) {
         log.info("Verifying email for user {}", email);
 
         final UserResource userResource = keycloak.realm(realm).users().get(kkId);
@@ -184,24 +255,29 @@ public class UserService {
         );
     }
 
-    private static UserRepresentation getUserRepresentation(KeycloakUserDto userDto, Role role) {
+    private UserRepresentation getUserRepresentation(KeycloakUserDto userDto, Role role) {
         UserRepresentation user = new UserRepresentation();
         user.setEnabled(true);
         user.setUsername(userDto.getEmail());
         user.setEmail(userDto.getEmail());
         user.setFirstName(userDto.getFirstName());
         user.setLastName(userDto.getLastName());
-        user.setRealmRoles(Collections.singletonList(role.name()));
         user.setEmailVerified(false);
         user.setRequiredActions(List.of(KeycloakActions.UPDATE_PASSWORD.name()));
-
-        /*// Set password
-        CredentialRepresentation credential = new CredentialRepresentation();
-        credential.setType(CredentialRepresentation.PASSWORD);
-        credential.setValue(userDto.getPassword());
-        credential.setTemporary(false);
-        user.setCredentials(Collections.singletonList(credential));*/
         return user;
+    }
+
+    private void assignRealmRoleToUser(String userId, String roleName) {
+        RoleRepresentation roleRep = keycloak.realm(realm).roles().get(roleName).toRepresentation();
+
+        keycloak.realm(realm)
+                .users()
+                .get(userId)
+                .roles()
+                .realmLevel()
+                .add(Collections.singletonList(roleRep));
+
+        log.info("Assigned realm role '{}' to user '{}'", roleName, userId);
     }
 
     private User saveUser(User user) {
@@ -210,7 +286,7 @@ public class UserService {
         } catch (Exception e) {
             deleteKeycloakUser(user.getKeycloakId());
 
-            String message = String.format("Failed to create user at family with specified id %s. Exc message: %s", user.getFamilyId(), e.getMessage());
+            String message = String.format("Failed to create user at family with specified id %s. Exc message: %s", user.getFamily(), e.getMessage());
             log.error(message);
             throw new UserServiceException(message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -219,4 +295,26 @@ public class UserService {
     private void deleteKeycloakUser(String kkId) {
         keycloak.realm(realm).users().delete(kkId);
     }
+
+    /*private boolean validateUser(String username, String password) {
+        String tokenUrl = KEYCLOAK_URL + "/realms/" + REALM + "/protocol/openid-connect/token";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+        map.add("username", username);
+        map.add("password", password);
+        map.add("grant_type", "password");
+        map.add("client_id", CLIENT_ID);
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(tokenUrl, request, String.class);
+            return response.getStatusCode().is2xxSuccessful();
+        } catch (HttpClientErrorException ex) {
+            return false;
+        }
+    }*/
 }

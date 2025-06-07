@@ -8,7 +8,7 @@ spring:
         registration:
           keycloak:
             client-id: fbp
-            client-secret: JxYYv7zap2uhHNWFii3ET8LRvx2RdJWh
+            client-secret: yQJX4vRvoeYaJi0ZifiGLc7itniEfZZB
             scope: openid,profile,email
             authorization-grant-type: authorization_code
         provider:
@@ -25,17 +25,16 @@ spring:
     username: fbp
     password: fbp
     driver-class-name: org.postgresql.Driver
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      timeout: 5000ms
-      password: 1234
-      username: redis
 keycloak:
   server-url: http://localhost:1111
   realm: dev
   username: admin
   password: password
+  credentials:
+    secret: yQJX4vRvoeYaJi0ZifiGLc7itniEfZZB
 server:
   port: 8081
+  max-http-request-header-size: 64KB
+logging:
+  level:
+    root: info
